@@ -1,0 +1,18 @@
+configuration {
+	modes: "drun";
+	font: "Iosevka Nerd Font 18";
+	location: 0;
+	fixed-num-lines: false;
+	show-icons: true;
+	kb-cancel: "Escape,Control+g,Control+bracketleft,MousePrimary";
+  timeout {
+      action: "kb-cancel";
+      delay:  0;
+  }
+  filebrowser {
+      directories-first: true;
+      sorting-method:    "name";
+  }
+}
+
+@theme "theme"

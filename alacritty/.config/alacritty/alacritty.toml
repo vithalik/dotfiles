@@ -1,0 +1,21 @@
+general.import = ["~/.config/alacritty/monokai_charcoal.toml"]
+
+[font]
+size = 15.0
+
+[font.normal]
+family = "IosevkaTerm Nerd Font"
+style = "Regular"
+
+[font.bold]
+family = "IosevkaTerm Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "IosevkaTerm Nerd Font"
+style = "Italic"
+
+[window]
+padding.x = 7
+dynamic_padding = true
+opacity = 0.9
