@@ -6,8 +6,9 @@
     // "spacing": 4, // Gaps between modules (4px)
 
     "modules-left": ["tray"],
-    "modules-center": ["custom/media"],
+    "modules-center": [],
     "modules-right": [
+        "custom/media",
         "custom/brightness",
         "pulseaudio",
         "temperature",
@@ -15,7 +16,6 @@
         "memory",
         "disk",
         "hyprland/language",
-        // "custom/weather",
         "clock"
     ],
     "tray": {
@@ -65,27 +65,26 @@
         "format-icons": [""]
     },
     "pulseaudio": {
-        // "scroll-step": 1, // %, can be a float
         "format": "{volume}% {icon}",
         "format-bluetooth": "{volume}% {icon} ",
-        "format-bluetooth-muted": " {icon}",
-        "format-muted": " {format_source}",
-        "format-source": "{volume}% ",
-        "format-source-muted": "",
+        "format-bluetooth-muted": "{volume}%  ",
+        "format-muted": "{volume}%  ",
         "format-icons": {
             "headphone": "",
             "hands-free": "",
             "headset": "",
             "default": ["", " "]
         },
-        "ignored-sinks": ["JamesDSP Sink"]
+        "ignored-sinks": ["JamesDSP Sink"],
+        "on-click": "wpctl set-mute @DEFAULT_SINK@ toggle"
     },
     "custom/media": {
         "tooltip": false,
         "format": "{}",
         "interval": 1,
         "escape": true,
-        "exec": "$HOME/.config/waybar/scripts/get_spotify.sh"
+        "exec": "$HOME/.config/waybar/scripts/get_spotify.sh",
+        "on-click": "playerctl play-pause"
     },
     "hyprland/language": {
         "format": "{}",
@@ -102,7 +101,7 @@
     },
     "custom/brightness": {
         "tooltip": false,
-        "format": "{}%  ",
+        "format": "{}%  ",
         "interval": 5,
         "exec": "cat /tmp/monitor_brightness"
     },
@@ -111,5 +110,10 @@
         "format": "{}°C 󰖕",
         "exec": "curl -s 'https://api.open-meteo.com/v1/forecast?latitude=53.90&longitude=27.57&current_weather=true&temperature_2m' | jq '.current_weather.temperature' | xargs printf '%.0f'",
         "interval": 1800
+    },
+    "custom/separator": {
+        "format": "|",
+        "interval": "once",
+        "tooltip": false
     }
 }
