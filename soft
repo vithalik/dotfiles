@@ -16,6 +16,7 @@ bind
 blueman
 bluez-utils
 brave-beta-bin
+brightnessctl
 btop
 btrfs-progs
 buildah
@@ -93,6 +94,7 @@ lib32-mesa
 lib32-pipewire
 libpulse
 libqalculate
+libva-nvidia-driver
 libva-utils
 linux
 linux-firmware
@@ -102,6 +104,7 @@ linux-lts-headers
 llvm
 lnav
 localsend-bin
+loupe
 lua-jsregexp
 lua-luv
 luarocks
@@ -127,7 +130,7 @@ noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
 npm
-nvidia-dkms
+nvidia-open-dkms
 nvtop
 nwg-look
 openmp
@@ -170,7 +173,6 @@ qt5-wayland
 qt5ct
 qt6-wayland
 qt6ct
-qview-git
 rebuild-detector
 ripgrep
 rofi-wayland
@@ -179,6 +181,7 @@ rustup
 sd
 signal-desktop
 slurp
+socat
 speedtest-go-bin
 spirv-headers
 spotify
