@@ -2,14 +2,18 @@
 
 case $1 in
 "shutdown")
-	rm ~/.cache/cliphist/db && halt -p
+	systemctl poweroff
 	;;
 "reboot")
-	reboot
+	systemctl reboot
 	;;
 "logout")
 	hyprctl dispatch exit
 	;;
 esac
+
+if [ $# -gt 0 ]; then
+	exit 0
+fi
 
 printf "shutdown\nreboot\nlogout"
