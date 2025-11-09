@@ -31,8 +31,6 @@ zstyle ':z4h:direnv:success' notify 'yes'
 zstyle ':z4h:ssh:example-hostname1'   enable 'yes'
 zstyle ':z4h:ssh:*.example-hostname2' enable 'no'
 
-zstyle ':z4h:ssh:192.168.31.104' enable 'yes'
-zstyle ':z4h:ssh:192.168.31.84' enable 'yes'
 zstyle ':z4h:ssh:localhost' enable 'yes'
 
 # The default value if none of the overrides above match the hostname.
@@ -92,6 +90,8 @@ z4h bindkey z4h-backward-kill-zword Ctrl+Alt+Backspace
 z4h bindkey undo Ctrl+/ Shift+Tab  # undo the last command line change
 z4h bindkey redo Alt+/             # redo the last undone command line change
 
+bindkey -s "^F" "tms\n"
+
 z4h bindkey z4h-cd-back    Alt+Left   # cd into the previous directory
 z4h bindkey z4h-cd-forward Alt+Right  # cd into the next directory
 z4h bindkey z4h-cd-up      Alt+Up     # cd into the parent directory
@@ -108,9 +108,7 @@ alias bt='bluetoothctl'
 alias drop='dragon-drop -x -a'
 alias cat='bat -pp'
 alias d='cd ~/dotfiles/'
-alias dev='pnpm run dev --host'
 alias fd='fd -HI'
-alias fm='yazi'
 alias fzf='fzf --preview "bat --color=always {}" --preview-window=right:60%:wrap'
 alias gc='git clone'
 alias gp='git pull'
@@ -121,33 +119,14 @@ alias ls='eza -a --icons --group-directories-first -s ext'
 alias lsblk='lsblk -o NAME,MODEL,SIZE,FSTYPE,MOUNTPOINTS,FSUSE%'
 alias lt='eza -T -L=2 -a --icons --group-directories-first'
 alias mkdir='mkdir -p'
-alias n='cd ~/projects/newtonlabs'
-alias nix='noglob nix'
-alias o='z obsidian && nvim todo.md'
-alias p='cd ~/projects'
-alias pipreqs='python -m pipreqs.pipreqs --force'
 alias qalc='qalc -t'
 alias r='paru -Rs'
-alias rebuild='sudo nixos-rebuild switch --flake ~/dotfiles/nixos/ --quiet --quiet'
 alias rg='rg --hidden --no-ignore --no-messages'
 alias rmf='rm -rf'
-alias ssh-coolify='ssh igor@192.168.31.84'
-alias ssh-homelab='ssh igor@192.168.31.104'
-alias ssh-kodi='ssh root@192.168.31.26'
-alias ssh-mac='ssh -p 22220 igor@localhost'
-alias ssh-printer='ssh igor@192.168.31.19'
-alias ssh-proxmox='ssh root@192.168.31.151'
-alias ssh-racknerd='ssh root@172.245.180.243'
-alias ssh-router='ssh root@192.168.31.1'
-alias ssh-tv='ssh root@192.168.31.81'
 alias stow='stow --no-folding -Rv'
 alias sv='sudoedit'
-alias udiskmount='udisksctl mount -b'
-alias update='sudo nix flake update --flake ~/dotfiles/nixos && rebuild'
 alias v.='nvim .'
 alias v='nvim'
-alias wgdown='basename /proc/sys/net/ipv4/conf/*vpn | xargs sudo wg-quick down'
-alias wgup='sudo wg-quick up'
 
 # Set shell options: http://zsh.sourceforge.net/Doc/Release/Options.html.
 setopt glob_dots     # no special treatment for file names with a leading dot
