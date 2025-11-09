@@ -1,4 +1,4 @@
-local opt = vim.opt
+local opt = vim.o
 local cmd = vim.cmd
 local map = vim.keymap.set
 local hl = vim.api.nvim_set_hl
@@ -6,12 +6,12 @@ local autocmd = vim.api.nvim_create_autocmd
 
 vim.g.mapleader = " "
 
-vim.o.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
-
+opt.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+opt.winborder = "rounded"
 opt.breakindent = true
 opt.clipboard = "unnamedplus"
 opt.completeopt = "menuone,noselect"
-opt.expandtab = true
+opt.expandtab = false
 opt.hlsearch = false
 opt.ignorecase = true
 opt.inccommand = "split"
@@ -19,8 +19,10 @@ opt.mouse = "a"
 opt.number = true
 opt.pumheight = 10 -- Maximum number of entries in a popup
 opt.relativenumber = true
-opt.scrolloff = 15
+opt.scrolloff = 10
+opt.shiftround = true
 opt.shiftwidth = 4
+opt.showmode = false
 opt.signcolumn = "yes"
 opt.smartcase = true
 opt.smartindent = true
@@ -33,6 +35,11 @@ opt.termguicolors = true
 opt.timeoutlen = 500
 opt.undofile = true
 opt.updatetime = 200
+opt.laststatus = 3
+opt.foldcolumn = "0"
+opt.foldlevel = 99
+opt.foldmethod = "expr"
+opt.foldexpr = "v:lua.vim.lsp.foldexpr()"
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
@@ -48,51 +55,50 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 local servers = {
-	astro = {},
 	bashls = {},
 	clangd = { filetypes = { "c", "cpp", "arduino", "h", "hpp" } },
-	gopls = {},
 	html = {},
-	htmx = {},
-	lua_ls = { Lua = { diagnostics = { globals = { "vim" } } } },
+	jsonls = {},
+	lua_ls = { settings = { Lua = { diagnostics = { globals = { "vim" } } } } },
 	marksman = {},
-	nil_ls = {},
-	ols = {},
-	openscad_lsp = {},
-	pyright = {
-		pyright = {
-			-- Using Ruff's import organizer
-			disableOrganizeImports = true,
-		},
-		python = {
-			analysis = {
-				-- Ignore all files for analysis to exclusively use Ruff for linting
-				ignore = { "*" },
+	basedpyright = {
+		settings = {
+			basedpyright = {
+				disableOrganizeImports = true,
+				analysis = {
+					ignore = { "*" },
+					typeCheckingMode = "off",
+					inlayHints = {
+						callArgumentNames = false,
+						functionReturnTypes = false,
+						genericTypes = false,
+						variableTypes = false,
+					},
+				},
 			},
 		},
 	},
+	ty = {},
 	ruff = {},
-	rust_analyzer = {},
-	svelte = {},
+	sqls = {},
 	tailwindcss = {},
-	templ = {},
-	ts_ls = {},
+	vtsls = {},
 	yamlls = {},
 }
 
 local formatters = {
-	"gofumpt",
-	"nixpkgs-fmt",
+	"kulala-fmt",
 	"rustywind",
 	"shfmt",
 	"stylua",
-	"templ",
 	"taplo",
+	"prettierd",
 }
 
 local linters = {
-	"golangci-lint",
 	"jsonlint",
+	"shellcheck",
+	"oxlint",
 }
 
 local ensure_installed = vim.tbl_keys(servers)
@@ -118,71 +124,23 @@ require("lazy").setup({
 				},
 			})
 		end,
-		vim.filetype.add({
-			pattern = { [".*/hyprland%.conf"] = "hyprlang" },
-		}),
 	},
 
 	{
-		"nvim-telescope/telescope.nvim",
-		config = function()
-			local telescope = require("telescope")
-			local telescopeBuiltIn = require("telescope.builtin")
-
-			telescope.setup({
-				pickers = {
-					find_files = {
-						theme = "dropdown",
-						previewer = false,
-					},
-					git_files = {
-						theme = "dropdown",
-						previewer = false,
-					},
-				},
-			})
-
-			-- We cache the results of "git rev-parse"
-			-- Process creation is expensive in Windows, so this reduces latency
-			local is_inside_work_tree = {}
-
-			telescopeBuiltIn.project_files = function()
-				local opts = {} -- define here if you want to define something
-
-				local cwd = vim.fn.getcwd()
-				if is_inside_work_tree[cwd] == nil then
-					vim.fn.system("git rev-parse --is-inside-work-tree")
-					is_inside_work_tree[cwd] = vim.v.shell_error == 0
-				end
-
-				if is_inside_work_tree[cwd] then
-					require("telescope.builtin").git_files(opts)
-				else
-					require("telescope.builtin").find_files(opts)
-				end
-			end
-		end,
-
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-			{
-				"nvim-telescope/telescope-fzf-native.nvim",
-				build = "make",
-				cond = function()
-					return vim.fn.executable("make") == 1
-				end,
-			},
-		},
+		"ravsii/tree-sitter-d2",
+		dependencies = { "nvim-treesitter/nvim-treesitter" },
+		build = "make nvim-install",
 	},
 
 	{
 		"stevearc/oil.nvim",
+		lazy = false,
 		opts = {
 			use_default_keymaps = false,
 			keymaps = {
 				["<CR>"] = "actions.select",
-				["-"] = "actions.parent",
-				["<C-c>"] = "actions.close",
+				["-"] = { "actions.parent", mode = "n" },
+				["<C-c>"] = { "actions.close", mode = "n" },
 			},
 			view_options = {
 				show_hidden = true,
@@ -199,52 +157,27 @@ require("lazy").setup({
 				white = "None",
 				bg = "None",
 				menu = "None",
-				comment = "#b3b3b3",
-				selection = "#4c4c4c",
+				comment = "#777777",
+				selection = "#2D2D2D",
+				visual = "#2D2D2D",
 			},
 			italic_comment = true,
+			overrides = {
+				LspInlayHint = { fg = "#777777", bg = "None", italic = true },
+			},
 		},
 	},
 
 	{
 		"neovim/nvim-lspconfig",
 		dependencies = {
-			{
-				"williamboman/mason.nvim",
-				opts = { ui = { border = "rounded" } },
-			},
-
-			{
-				"williamboman/mason-lspconfig.nvim",
-				config = function()
-					local group = vim.api.nvim_create_augroup("__env", { clear = true })
-					vim.api.nvim_create_autocmd("BufEnter", {
-						pattern = ".env",
-						group = group,
-						callback = function(args)
-							vim.diagnostic.disable(args.buf)
-						end,
-					})
-				end,
-			},
-
+			{ "mason-org/mason.nvim" },
+			{ "mason-org/mason-lspconfig.nvim" },
 			{
 				"WhoIsSethDaniel/mason-tool-installer.nvim",
 				opts = {
 					ensure_installed = ensure_installed,
 					auto_update = true,
-				},
-			},
-
-			{
-				"j-hui/fidget.nvim",
-				opts = {
-					notification = {
-						window = {
-							winblend = 0,
-							border = "rounded",
-						},
-					},
 				},
 			},
 
@@ -256,32 +189,47 @@ require("lazy").setup({
 							timeout_ms = 500,
 							lsp_fallback = true,
 						},
-						notify_on_error = false,
 						formatters = {
-							deno_fmt = { append_args = { "--indent-width=4" } },
+							deno_fmt = { append_args = { "--use-tabs", "--line-width=90" } },
+							caddy = {
+								command = "caddy",
+								args = { "fmt", "-" },
+								stdin = true,
+							},
+							prettierd = {
+								append_args = {
+									"--config-precedence=file-override",
+									"--print-width=90",
+									"--use-tabs=true",
+								},
+							},
 						},
 						formatters_by_ft = {
 							astro = { "deno_fmt", "rustywind" },
 							c = { "clang-format" },
+							caddy = { "caddy" },
 							cpp = { "clang-format" },
 							css = { "deno_fmt" },
-							dart = { "dart_format" },
+							d2 = { "d2" },
 							go = { "gofumpt" },
+							html = { "deno_fmt" },
+							http = { "kulala-fmt" },
 							ino = { "clang-format" },
-							javascript = { "deno_fmt", "rustywind" },
-							typescript = { "deno_fmt", "rustywind" },
+							javascript = { "prettierd", "rustywind" },
 							json = { "deno_fmt" },
 							jsonc = { "deno_fmt" },
 							lua = { "stylua" },
 							markdown = { "deno_fmt" },
 							nix = { "nixpkgs_fmt" },
+							php = { "php_cs_fixer" },
 							python = { "ruff_format", "ruff_organize_imports" },
-							sh = { "shfmt" },
+							ruby = { "rubyfmt" },
 							sql = { "pg_format" },
-							svelte = { "deno_fmt", "rustywind" },
+							svelte = { "prettierd", "rustywind" },
 							swift = { "swiftformat" },
 							templ = { "templ", "rustywind" },
 							toml = { "taplo" },
+							typescript = { "prettierd", "rustywind" },
 							yaml = { "deno_fmt" },
 						},
 					})
@@ -292,9 +240,23 @@ require("lazy").setup({
 				"mfussenegger/nvim-lint",
 				config = function()
 					local lint = require("lint")
+					lint.linters.oxlint.args = {
+						"--format",
+						"unix",
+						"-D",
+						"suspicious",
+						"-D",
+						"perf",
+					}
 					lint.linters_by_ft = {
 						go = { "golangcilint" },
 						json = { "jsonlint" },
+						php = { "phpstan" },
+						svelte = { "oxlint" },
+						javascript = { "oxlint" },
+						typescript = { "oxlint" },
+						javascriptreact = { "oxlint" },
+						typescriptreact = { "oxlint" },
 					}
 
 					-- Create autocommand which carries out the actual linting
@@ -312,88 +274,32 @@ require("lazy").setup({
 	},
 
 	{
-		"lukas-reineke/indent-blankline.nvim",
-		main = "ibl",
+		"saghen/blink.cmp",
+		version = "1.*",
+		dependencies = {
+			{ "rafamadriz/friendly-snippets" },
+		},
 		opts = {
-			indent = {
-				char = "│",
+			keymap = { preset = "default" },
+
+			appearance = {
+				nerd_font_variant = "normal",
 			},
-			scope = { enabled = false },
-			exclude = {
-				filetypes = {
-					"help",
-					"alpha",
-					"dashboard",
-					"neo-tree",
-					"Trouble",
-					"trouble",
-					"lazy",
-					"mason",
-					"notify",
-					"toggleterm",
-					"lazyterm",
+
+			completion = {
+				documentation = {
+					auto_show = true,
+					auto_show_delay_ms = 200,
 				},
 			},
-		},
-		dependencies = {
-			{
-				"echasnovski/mini.indentscope",
-				opts = {
-					symbol = "│",
-					draw = {
-						delay = 0,
-						animation = function()
-							return 0
-						end,
-					},
-					options = {
-						border = "top",
-					},
-				},
+
+			sources = {
+				default = { "lsp", "path", "snippets", "buffer" },
 			},
-		},
-	},
 
-	{
-		"L3MON4D3/LuaSnip",
-		build = "make install_jsregexp",
-	},
-
-	{
-		"hrsh7th/nvim-cmp",
-		dependencies = {
-			"hrsh7th/cmp-buffer",
-			"hrsh7th/cmp-cmdline",
-			"hrsh7th/cmp-nvim-lsp",
-			"hrsh7th/cmp-nvim-lua",
-			"hrsh7th/cmp-path",
-			"onsails/lspkind.nvim",
-			"L3MON4D3/LuaSnip",
-			"saadparwaiz1/cmp_luasnip",
-			"rafamadriz/friendly-snippets",
-			"roobert/tailwindcss-colorizer-cmp.nvim",
+			fuzzy = { implementation = "prefer_rust_with_warning" },
 		},
-	},
-
-	{
-		"numToStr/Comment.nvim",
-		config = function()
-			require("Comment").setup({
-				pre_hook = require("ts_context_commentstring.integrations.comment_nvim").create_pre_hook(),
-				toggler = { line = "<C-/>" },
-			})
-		end,
-		dependencies = {
-			"JoosepAlviste/nvim-ts-context-commentstring",
-			opts = {
-				languages = {
-					templ = {
-						__default = "// %s",
-						component_declaration = "<!-- %s -->",
-					},
-				},
-			},
-		},
+		opts_extend = { "sources.default" },
 	},
 
 	{
@@ -410,26 +316,21 @@ require("lazy").setup({
 	},
 
 	{
-		"NvChad/nvim-colorizer.lua",
+		"catgoose/nvim-colorizer.lua",
 		opts = {
 			user_default_options = {
-				tailwind = true,
+				tailwind = "both",
 			},
 		},
 	},
 
-	{
-		"kylechui/nvim-surround",
-		version = "*",
-		event = "VeryLazy",
-		opts = {},
-	},
+	{ "echasnovski/mini.surround", version = "*", opts = {} },
 
 	{
 		"rmagatti/auto-session",
 		lazy = false,
 		opts = {
-			suppressed_dirs = { "~/", "~/Downloads", "/" },
+			suppressed_dirs = { "/", "~/", "~/Desktop/", "~/Downloads" },
 		},
 	},
 
@@ -437,55 +338,38 @@ require("lazy").setup({
 
 	{ "hiphish/rainbow-delimiters.nvim" },
 
-	{ "folke/zen-mode.nvim" },
-
-	{
-		"folke/trouble.nvim",
-		keys = {
-			{
-				"<leader>d",
-				"<cmd>Trouble diagnostics toggle<cr>",
-				desc = "Diagnostics (Trouble)",
-			},
-			{
-				"<leader>q",
-				"<cmd>Trouble qflist toggle<cr>",
-				desc = "Quickfix List (Trouble)",
-			},
-		},
-		opts = {},
-	},
-
-	{ "Darazaki/indent-o-matic", opts = {} },
-
 	{
 		"ThePrimeagen/harpoon",
 		branch = "harpoon2",
 		dependencies = { "nvim-lua/plenary.nvim" },
-	},
+		config = function()
+			local harpoon = require("harpoon")
 
-	{
-		"kdheepak/lazygit.nvim",
-		lazy = true,
-		cmd = {
-			"LazyGit",
-			"LazyGitConfig",
-			"LazyGitCurrentFile",
-			"LazyGitFilter",
-			"LazyGitFilterCurrentFile",
-		},
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-		},
-		keys = {
-			{ "<leader>lg", "<cmd>LazyGit<cr>", desc = "LazyGit" },
-		},
+			map("n", "<leader>a", function()
+				harpoon:list():add()
+			end)
+			map("n", "<leader>hb", function()
+				harpoon.ui:toggle_quick_menu(harpoon:list())
+			end)
+			map("n", "<leader>j", function()
+				harpoon:list():select(1)
+			end)
+			map("n", "<leader>k", function()
+				harpoon:list():select(2)
+			end)
+			map("n", "<leader>l", function()
+				harpoon:list():select(3)
+			end)
+			map("n", "<leader>;", function()
+				harpoon:list():select(4)
+			end)
+		end,
 	},
 
 	{
 		"codethread/qmk.nvim",
+		lazy = true,
 		config = function()
-			---@type qmk.UserConfig
 			local conf = {
 				name = "ikiosuru",
 				layout = {
@@ -497,6 +381,403 @@ require("lazy").setup({
 				variant = "zmk",
 			}
 			require("qmk").setup(conf)
+		end,
+	},
+
+	{
+		"mistweaverco/kulala.nvim",
+		version = "*",
+		ft = { "http", "rest" },
+		opts = {
+			global_keymaps = true,
+		},
+	},
+
+	{
+		"folke/snacks.nvim",
+		priority = 1000,
+		lazy = false,
+		opts = {
+			bigfile = {},
+			dim = {},
+			explorer = {},
+			indent = {
+				animate = { enabled = false },
+				filter = function(buf)
+					local excluded_filetypes = { markdown = true }
+					return vim.g.snacks_indent ~= false
+						and vim.b[buf].snacks_indent ~= false
+						and vim.bo[buf].buftype == ""
+						and not excluded_filetypes[vim.bo[buf].filetype]
+				end,
+			},
+			input = {},
+			picker = {},
+			lazygit = {},
+			notifier = {},
+			rename = {},
+		},
+		keys = {
+			-- Top Pickers & Explorer
+			{
+				"<leader><space>",
+				function()
+					Snacks.picker.smart()
+				end,
+				desc = "Smart Find Files",
+			},
+			{
+				"<leader>,",
+				function()
+					Snacks.picker.buffers()
+				end,
+				desc = "Buffers",
+			},
+			{
+				"<leader>/",
+				function()
+					Snacks.picker.grep()
+				end,
+				desc = "Grep",
+			},
+			{
+				"<leader>:",
+				function()
+					Snacks.picker.command_history()
+				end,
+				desc = "Command History",
+			},
+			{
+				"<leader>n",
+				function()
+					Snacks.picker.notifications()
+				end,
+				desc = "Notification History",
+			},
+			{
+				"<leader>e",
+				function()
+					Snacks.explorer()
+				end,
+				desc = "File Explorer",
+			},
+			--find
+			{
+				"<leader>ff",
+				function()
+					Snacks.picker.files()
+				end,
+				desc = "Find Files",
+			},
+			{
+				"<leader>fg",
+				function()
+					Snacks.picker.git_files()
+				end,
+				desc = "Find Git Files",
+			},
+			-- git
+			{
+				"<leader>gb",
+				function()
+					Snacks.picker.git_branches()
+				end,
+				desc = "Git Branches",
+			},
+			{
+				"<leader>gl",
+				function()
+					Snacks.picker.git_log()
+				end,
+				desc = "Git Log",
+			},
+			{
+				"<leader>gs",
+				function()
+					Snacks.picker.git_status()
+				end,
+				desc = "Git Status",
+			},
+			{
+				"<leader>gS",
+				function()
+					Snacks.picker.git_stash()
+				end,
+				desc = "Git Stash",
+			},
+			-- Grep
+			{
+				"<leader>sg",
+				function()
+					Snacks.picker.grep()
+				end,
+				desc = "Grep",
+			},
+			{
+				"<leader>sw",
+				function()
+					Snacks.picker.grep_word()
+				end,
+				desc = "Visual selection or word",
+				mode = { "n", "x" },
+			},
+			-- search
+			{
+				'<leader>s"',
+				function()
+					Snacks.picker.registers()
+				end,
+				desc = "Registers",
+			},
+			{
+				"<leader>s/",
+				function()
+					Snacks.picker.search_history()
+				end,
+				desc = "Search History",
+			},
+			{
+				"<leader>sb",
+				function()
+					Snacks.picker.lines()
+				end,
+				desc = "Buffer Lines",
+			},
+			{
+				"<leader>sc",
+				function()
+					Snacks.picker.command_history()
+				end,
+				desc = "Command History",
+			},
+			{
+				"<leader>sC",
+				function()
+					Snacks.picker.commands()
+				end,
+				desc = "Commands",
+			},
+			{
+				"<leader>sd",
+				function()
+					Snacks.picker.diagnostics()
+				end,
+				desc = "Diagnostics",
+			},
+			{
+				"<leader>sD",
+				function()
+					Snacks.picker.diagnostics_buffer()
+				end,
+				desc = "Buffer Diagnostics",
+			},
+			{
+				"<leader>sh",
+				function()
+					Snacks.picker.help()
+				end,
+				desc = "Help Pages",
+			},
+			{
+				"<leader>sH",
+				function()
+					Snacks.picker.highlights()
+				end,
+				desc = "Highlights",
+			},
+			{
+				"<leader>si",
+				function()
+					Snacks.picker.icons()
+				end,
+				desc = "Icons",
+			},
+			{
+				"<leader>sj",
+				function()
+					Snacks.picker.jumps()
+				end,
+				desc = "Jumps",
+			},
+			{
+				"<leader>sk",
+				function()
+					Snacks.picker.keymaps()
+				end,
+				desc = "Keymaps",
+			},
+			{
+				"<leader>sl",
+				function()
+					Snacks.picker.loclist()
+				end,
+				desc = "Location List",
+			},
+			{
+				"<leader>sm",
+				function()
+					Snacks.picker.marks()
+				end,
+				desc = "Marks",
+			},
+			{
+				"<leader>sM",
+				function()
+					Snacks.picker.man()
+				end,
+				desc = "Man Pages",
+			},
+			{
+				"<leader>sq",
+				function()
+					Snacks.picker.qflist()
+				end,
+				desc = "Quickfix List",
+			},
+			{
+				"<leader>sR",
+				function()
+					Snacks.picker.resume()
+				end,
+				desc = "Resume",
+			},
+			{
+				"<leader>su",
+				function()
+					Snacks.picker.undo()
+				end,
+				desc = "Undo History",
+			},
+			{
+				"<leader>uC",
+				function()
+					Snacks.picker.colorschemes()
+				end,
+				desc = "Colorschemes",
+			},
+			-- LSP
+			{
+				"gd",
+				function()
+					Snacks.picker.lsp_definitions()
+				end,
+				desc = "Goto Definition",
+			},
+			{
+				"gD",
+				function()
+					Snacks.picker.lsp_declarations()
+				end,
+				desc = "Goto Declaration",
+			},
+			{
+				"gr",
+				function()
+					Snacks.picker.lsp_references()
+				end,
+				nowait = true,
+				desc = "References",
+			},
+			{
+				"gI",
+				function()
+					Snacks.picker.lsp_implementations()
+				end,
+				desc = "Goto Implementation",
+			},
+			{
+				"gy",
+				function()
+					Snacks.picker.lsp_type_definitions()
+				end,
+				desc = "Goto T[y]pe Definition",
+			},
+			-- Other
+			{
+				"<leader>z",
+				function()
+					Snacks.zen()
+				end,
+				desc = "Toggle Zen Mode",
+			},
+			{
+				"<leader>.",
+				function()
+					Snacks.scratch()
+				end,
+				desc = "Toggle Scratch Buffer",
+			},
+			{
+				"<leader>S",
+				function()
+					Snacks.scratch.select()
+				end,
+				desc = "Select Scratch Buffer",
+			},
+			{
+				"<leader>n",
+				function()
+					Snacks.notifier.show_history()
+				end,
+				desc = "Notification History",
+			},
+			{
+				"<leader>bd",
+				function()
+					Snacks.bufdelete()
+				end,
+				desc = "Delete Buffer",
+			},
+			{
+				"<leader>cR",
+				function()
+					Snacks.rename.rename_file()
+				end,
+				desc = "Rename File",
+			},
+			{
+				"<leader>gB",
+				function()
+					Snacks.gitbrowse()
+				end,
+				desc = "Git Browse",
+				mode = { "n", "v" },
+			},
+			{
+				"<leader>gg",
+				function()
+					Snacks.lazygit()
+				end,
+				desc = "Lazygit",
+			},
+			{
+				"<leader>un",
+				function()
+					Snacks.notifier.hide()
+				end,
+				desc = "Dismiss All Notifications",
+			},
+		},
+	},
+
+	{
+		"echasnovski/mini.statusline",
+		version = false,
+		config = function()
+			local statusline = require("mini.statusline")
+			statusline.section_location = function()
+				return "%2l:%-2v"
+			end
+			statusline.section_filename = function()
+				return vim.fn.expand("%:.")
+			end
+			statusline.section_fileinfo = function()
+				local filetype = vim.bo.filetype
+				local icon = require("nvim-web-devicons").get_icon(vim.fn.expand("%:t"), nil, { default = true })
+				filetype = icon .. " " .. filetype
+				return filetype
+			end
+			statusline.setup()
 		end,
 	},
 }, {
@@ -511,47 +792,14 @@ autocmd("FileType", {
 	command = "set formatoptions-=cro",
 })
 
-local telescope_fn = require("telescope.builtin")
+for server_name, config in pairs(servers) do
+	vim.lsp.config(server_name, config)
+end
 
-map("n", "<leader>f", telescope_fn.find_files)
-map("n", "<leader>g", telescope_fn.project_files)
-map("n", "<leader>w", telescope_fn.live_grep)
-map("n", "<leader>h", telescope_fn.help_tags)
-map("n", "<leader>cw", function()
-	local word = vim.fn.expand("<cword>")
-	telescope_fn.grep_string({ search = word })
-end)
-map("n", "<leader>cW", function()
-	local word = vim.fn.expand("<cWORD>")
-	telescope_fn.grep_string({ search = word })
-end)
+require("mason").setup()
+require("mason-lspconfig").setup()
 
-local harpoon = require("harpoon")
-
-map("n", "<leader>a", function()
-	harpoon:list():add()
-end)
-map("n", "<leader>b", function()
-	harpoon.ui:toggle_quick_menu(harpoon:list())
-end)
-map("n", "<leader>j", function()
-	harpoon:list():select(1)
-end)
-map("n", "<leader>k", function()
-	harpoon:list():select(2)
-end)
-map("n", "<leader>l", function()
-	harpoon:list():select(3)
-end)
-map("n", "<leader>;", function()
-	harpoon:list():select(4)
-end)
-map("n", "H", function()
-	harpoon:list():prev()
-end)
-map("n", "L", function()
-	harpoon:list():next()
-end)
+map("n", "K", vim.lsp.buf.hover)
 
 map({ "n", "i" }, "<MiddleMouse>", "<Nop>")
 map({ "n", "i", "v" }, "<RightMouse>", "<Nop>")
@@ -582,42 +830,16 @@ map("n", "-", "<CMD>Oil<CR>")
 map("v", "J", ":m '>+1<CR>gv=gv", { silent = true })
 map("v", "K", ":m '<-2<CR>gv=gv", { silent = true })
 
-map("n", "<leader>x", ":bd<CR>")
-
 map("n", "<leader>rn", ":IncRename ")
 
--- Increase and decrease ints
-map("n", "<C-S-a>", "<C-a>")
-map("n", "<C-S-x>", "<C-x>")
+map("n", "<C-f>", "<CMD>silent !tmux neww tmux-sessionizer<CR>")
 
 -- Diagnostic keymaps
 map("n", "[d", vim.diagnostic.goto_prev)
 map("n", "]d", vim.diagnostic.goto_next)
-map("n", "<leader>e", vim.diagnostic.open_float)
+map("n", "<leader>d", vim.diagnostic.open_float)
 
-map("n", "<leader>z", ":ZenMode<CR>", { silent = true })
-
---  This function gets run when an LSP connects to a particular buffer.
-local on_attach = function(_, bufnr)
-	local nmap = function(keys, func, desc)
-		if desc then
-			desc = "LSP: " .. desc
-		end
-
-		map("n", keys, func, { buffer = bufnr, desc = desc })
-	end
-
-	nmap("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
-
-	nmap("gd", telescope_fn.lsp_definitions, "[G]oto [D]efinition")
-	nmap("gr", telescope_fn.lsp_references, "[G]oto [R]eferences")
-	nmap("gI", telescope_fn.lsp_implementations, "[G]oto [I]mplementation")
-	nmap("<leader>D", telescope_fn.lsp_type_definitions, "Type [D]efinition")
-
-	nmap("K", vim.lsp.buf.hover, "Hover Documentation")
-end
-
-hl(0, "YankHighlight", { fg = "black", bg = "white" })
+hl(0, "YankHighlight", { fg = "#131412", bg = "#E2E3E3" })
 local highlight_group = vim.api.nvim_create_augroup("YankHighlight", { clear = true })
 autocmd("TextYankPost", {
 	callback = function()
@@ -627,92 +849,75 @@ autocmd("TextYankPost", {
 	pattern = "*",
 })
 
--- nvim-cmp supports additional completion capabilities, so broadcast that to servers
-local capabilities = vim.lsp.protocol.make_client_capabilities()
-capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities)
-
-require("mason-lspconfig").setup_handlers({
-	function(server_name)
-		require("lspconfig")[server_name].setup({
-			capabilities = capabilities,
-			on_attach = on_attach,
-			settings = servers[server_name],
-			filetypes = (servers[server_name] or {}).filetypes,
-		})
-	end,
-})
-
--- [[ Configure nvim-cmp ]]
-local cmp = require("cmp")
-local luasnip = require("luasnip")
-local lspkind = require("lspkind")
-require("luasnip.loaders.from_vscode").lazy_load()
-luasnip.config.setup({})
-
-cmp.setup({
-	formatting = {
-		format = lspkind.cmp_format({
-			maxwidth = 50,
-			ellipsis_char = "...",
-		}),
-	},
-	view = {
-		entries = { name = "custom", selection_order = "near_cursor" },
-	},
-	window = {
-		completion = cmp.config.window.bordered({
-			border = "rounded",
-			winhighlight = "Normal:CmpPmenu,CursorLine:PmenuSel,Search:None",
-		}),
-		documentation = cmp.config.window.bordered({
-			border = "rounded",
-		}),
-	},
-	snippet = {
-		expand = function(args)
-			luasnip.lsp_expand(args.body)
-		end,
-	},
-	completion = {
-		completeopt = "menu,menuone,noinsert",
-	},
-	mapping = cmp.mapping.preset.insert({
-		["<C-y>"] = cmp.mapping.confirm(),
-	}),
-	sources = {
-		{ name = "nvim_lsp" },
-		{ name = "nvim_lua" },
-		{ name = "path" },
-		{ name = "luasnip" },
-		{ name = "buffer" },
-	},
-	-- experimental = {
-	-- 	ghost_text = true,
-	-- },
-})
-
--- `:` cmdline setup.
-cmp.setup.cmdline(":", {
-	mapping = cmp.mapping.preset.cmdline(),
-	sources = cmp.config.sources({
-		{ name = "path" },
-	}, {
-		{ name = "cmdline", keyword_length = 3 },
-	}),
-})
-
-cmp.config.formatting = {
-	format = require("tailwindcss-colorizer-cmp").formatter,
-}
-
-vim.filetype.add({ extension = { templ = "templ" } })
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
-vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
-vim.diagnostic.config({ float = { border = "rounded" } })
-
 vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 	pattern = "ikiosuru.py",
 	callback = function()
-		vim.diagnostic.disable()
+		vim.diagnostic.enable(false)
 	end,
+})
+
+vim.api.nvim_create_autocmd("BufEnter", {
+	pattern = ".env",
+	callback = function(args)
+		vim.diagnostic.enable(false, args)
+	end,
+})
+
+vim.api.nvim_create_autocmd("InsertLeave", {
+	callback = function()
+		os.execute("hyprctl switchxkblayout current 0 >/dev/null 2>&1")
+	end,
+})
+
+vim.api.nvim_create_autocmd("User", {
+	pattern = "OilActionsPost",
+	callback = function(event)
+		if event.data.actions.type == "move" then
+			Snacks.rename.on_rename_file(event.data.actions.src_url, event.data.actions.dest_url)
+		end
+	end,
+})
+
+vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
+	pattern = { "Caddyfile", "*/Caddyfile", "*Caddyfile*" },
+	callback = function()
+		vim.bo.filetype = "caddy"
+	end,
+})
+
+vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
+	pattern = { "*.d2" },
+	callback = function()
+		vim.bo.filetype = "d2"
+	end,
+})
+
+vim.api.nvim_set_hl(0, "MiniStatuslineModeNormal", {
+	fg = "#111111",
+	bg = "#bd93f9",
+	bold = true,
+})
+
+vim.api.nvim_set_hl(0, "MiniStatuslineModeVisual", {
+	fg = "#111111",
+	bg = "#ff79c6",
+	bold = true,
+})
+
+vim.api.nvim_set_hl(0, "MiniStatuslineModeInsert", {
+	fg = "#111111",
+	bg = "#50fa7b",
+	bold = true,
+})
+
+vim.api.nvim_set_hl(0, "MiniStatuslineModeCommand", {
+	fg = "#111111",
+	bg = "#8be9fd",
+	bold = true,
+})
+
+vim.api.nvim_set_hl(0, "MiniStatuslineModeReplace", {
+	fg = "#111111",
+	bg = "#f1fa8c",
+	bold = true,
 })
